@@ -1,8 +1,8 @@
 const { Router } = require('express');
-const emailValidator = require("email-validator");
+const validator = require("validator");
 const bcrypt = require('bcryptjs');
 
-const User = require('./user.model');
+const { User } = require('../models')
 
 const controller = Router();
 
@@ -11,9 +11,10 @@ const userValidator = (req, res, next) => {
     const { name, email, password } = req.body;
     // TODO: email verification required validation does not prevent fraud
     // TODO: no password policy specified 
-    const isValid = name && typeof (name) == 'string' &&
-        password && typeof (password) == 'string'
-    email && typeof (email) == 'string' && emailValidator.validate(email);
+    const isValid =
+        (name && typeof (name) == 'string') &&
+        (password && typeof (password) == 'string') &&
+        (email && typeof (email) == 'string' && validator.isEmail(email));
     if (!isValid) {
         res.status(400).send({ message: 'missing or invalid input' });
         return;
@@ -21,26 +22,20 @@ const userValidator = (req, res, next) => {
     next();
 };
 
+const hashRounds = Number.parseInt(process.env.HASH_ROUNDS, 10);
 
 // create user record
 controller.post('/', userValidator, (req, res, next) => {
     // TODO: what about duplicate entries
     const { name, email, password } = req.body;
     // not safe to store passwords in a db
-    bcrypt.hash(password, process.env.HASH_ROUNDS, (err, passwordHash) => {
-        if (err) {
-            console.log(err);
-            res.status(500).send({ message: 'Server error' });
-            return;
-        }
+    bcrypt.hash(password, hashRounds, (err, passwordHash) => {
+        if (err) return next(err);
         User.create({ name, email, passwordHash })
             .then(savedUser => {
                 res.status(201).send({ message: 'User record saved', data: { id: savedUser.id } });
             })
-            .catch(err => {
-                console.log(err);
-                res.status(500).send({ message: 'Server error' });
-            });
+            .catch(next);
     });
 });
 
@@ -59,26 +54,23 @@ controller.post('/search', (req, res, next) => {
         .then(dbUser => {
             if (!dbUser) {
                 // not specific that email not found so an attacker cannot use this guess valid emails
-                res.status(400).send({ message: 'Invalid credentials' });
+                res.status(400).send({ message: 'User not found' });
                 return;
             }
             bcrypt.compare(password, dbUser.passwordHash, (err, validPassword) => {
-                if (err) {
-                    console.log(err);
-                    res.status(500).send({ message: 'Server error' });
-                    return;
-                }
-                if (!validPassword) {
+                if (err) return next(err);
+                if (validPassword) {
+                    const {name, email, id} = dbUser;
+                    res.send({name, email, id});
+                    return
+                } else {
                     // not specific that invalid password nso an attacker cannot use this guess valid emails
-                    res.status(400).send({ message: 'Invalid credentials' });
+                    res.status(400).send({ message: 'User not found' });
                     return;
                 }
             });
         })
-        .catch(err => {
-            console.log(err);
-            res.status(500).send({ message: 'Server error' });
-        });
+        .catch(next);
 });
 
 
@@ -93,10 +85,7 @@ controller.param('userId', (req, res, next, userId) => {
             req.dbUser = dbUser;
             next();
         })
-        .catch(err => {
-            console.log(err);
-            res.status(500).send({ message: 'Server error' });
-        });
+        .catch(next);
 });
 
 
@@ -104,20 +93,13 @@ controller.param('userId', (req, res, next, userId) => {
 controller.put('/{userId}', userValidator, (req, res, next) => {
     const { name, email, password } = req.body;
     // not safe to store passwords in a db
-    bcrypt.hash(password, process.env.HASH_ROUNDS, (err, passwordHash) => {
-        if (err) {
-            console.log(err);
-            res.status(500).send({ message: 'Server error' });
-            return;
-        }
+    bcrypt.hash(password, hashRounds, (err, passwordHash) => {
+        if (err) return next(err);
         req.dbUser.update({ name, email, passwordHash })
             .then(() => {
                 res.send({ message: 'User record updated' });
             })
-            .catch(err => {
-                console.log(err);
-                res.status(500).send({ message: 'Server error' });
-            });
+            .catch(next);
     });
 });
 
@@ -128,11 +110,19 @@ controller.delete('/{userId}', (req, res, next) => {
         .then(() => {
             res.send({ message: 'User record deleted' });
         })
-        .catch(err => {
-            console.log(err);
-            res.status(500).send({ message: 'Server error' });
-        });
+        .catch(next);
 });
+
+
+//TODO: Test purposes only
+controller.get('/all', (req, res, next) => {
+    User.findAll()
+        .then(allUsers => {
+            res.send(allUsers);
+        })
+        .catch(next)
+});
+
 
 
 module.exports = controller;

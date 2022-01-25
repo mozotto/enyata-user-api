@@ -7,3 +7,5 @@ Assumptions or Questions
 2. no specific security specified such  http basic auth, jwt tokens or api keys
 3. no password policy specified any string will pass for now
 4. not clear what to do about duplicate entries
+5. assuming json as the format
+6. No tests for demos

@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const helmet = require("helmet");
 
-const userController = require('./user.controller');
+const userController = require('./controllers/user');
 
 const app = express();
 
@@ -13,7 +13,7 @@ app.use(helmet()); // helmet security stuff
 
 app.use(morgan('dev')); // application logger
 
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // assuming json as format
 
 
 // Home route for testing
