@@ -64,7 +64,7 @@ controller.post('/search', (req, res, next) => {
                     res.send({name, email, id});
                     return
                 } else {
-                    // not specific that invalid password nso an attacker cannot use this guess valid emails
+                    // not specific that invalid password no an attacker cannot use this guess valid emails
                     res.status(400).send({ message: 'User not found' });
                     return;
                 }
@@ -79,7 +79,7 @@ controller.param('userId', (req, res, next, userId) => {
         .then(dbUser => {
             if (!dbUser) {
                 // not specific that email not found so an attacker cannot use this guess valid emails
-                res.status(404).send({ message: 'Invalid UserId' });
+                res.status(404).send({ message: 'User not found' });
                 return;
             }
             req.dbUser = dbUser;
@@ -90,7 +90,7 @@ controller.param('userId', (req, res, next, userId) => {
 
 
 //update user record
-controller.put('/{userId}', userValidator, (req, res, next) => {
+controller.put('/:userId', userValidator, (req, res, next) => {
     const { name, email, password } = req.body;
     // not safe to store passwords in a db
     bcrypt.hash(password, hashRounds, (err, passwordHash) => {
@@ -105,7 +105,7 @@ controller.put('/{userId}', userValidator, (req, res, next) => {
 
 
 // remove user record
-controller.delete('/{userId}', (req, res, next) => {
+controller.delete('/:userId', (req, res, next) => {
     req.dbUser.destroy({ force: true })
         .then(() => {
             res.send({ message: 'User record deleted' });
@@ -115,7 +115,7 @@ controller.delete('/{userId}', (req, res, next) => {
 
 
 //TODO: Test purposes only
-controller.get('/all', (req, res, next) => {
+controller.get('/', (req, res, next) => {
     User.findAll()
         .then(allUsers => {
             res.send(allUsers);
