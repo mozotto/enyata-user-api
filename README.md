@@ -8,4 +8,6 @@ Assumptions or Questions
 3. no password policy specified any string will pass for now
 4. not clear what to do about duplicate entries
 5. assuming json as the format
-6. No tests for demos
+6. no tests for demos
+7. for the retrieval using email password use /search with POST body
+
